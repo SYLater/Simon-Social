@@ -1,6 +1,7 @@
 <title>SS Login</title>
 <html>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    {% load static %}
+    <link rel="stylesheet" href="{% static  'login/login.css' %}">
 <body>
     <div id="login-body">
         <h1 id="login-header">Login with Simon</h1>

@@ -1,16 +1,17 @@
-<title>{% block title %} {% endblock %}</title>
+<title>Simon Social</title>
+{% load static %}
 <html>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" type="text/css" href="{% static 'dashboard/base.css' %}">
   <body id="site-body">
     <div id="nav-div">
       <div id="nav-left">
         <a href="/dashboard">Dashboard</a>
-        <a href="/socialboard"><span class="link-text">Chat</span></a>
+        <a href="{% url 'social-board' %}"><span class="link-text">Chat</span></a>
       </div>
       <div id="nav-right">
         <div class="username-dropdown">
           <span class="username">Jesse</span>
-          <img src="{{ url_for('static', filename='img/user-icon.png') }}" alt="User Icon" class="user-icon">
+          <img src="" alt="User Icon" class="user-icon">
           <div class="dropdown-content">
             <a onclick="location.href='/login' ">Logout</a>
             <a onclick="location.href='/editprofile' ">Edit Profile</a>
