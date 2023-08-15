@@ -1,0 +1,14 @@
+<title>SS Login</title>
+<html>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+<body>
+    <div id="login-body">
+        <h1 id="login-header">Login with Simon</h1>
+        <div id="input">
+            <input type="text" id="email-input" placeholder="Email">
+            <input type="password" id="password-input" placeholder="Password">
+            <button id="login-button" onclick="location.href='/dashboard'">Login</button>
+        </div>
+    </div>
+</body>
+</html>

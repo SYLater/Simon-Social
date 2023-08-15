@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Social Board{% endblock %}
+
+{% block content %}
+<div id="main-body">
+    <div id="teacher-list">
+        <h2>Teachers</h2>
+        <ul>
+            <li>Mr. Smith</li>
+            <li>Ms. Johnson</li>
+            <li>Mr. Davis</li>
+            <!-- Add more teachers as needed -->
+        </ul>
+    </div>
+    <div id="friend-list">
+        <h2>Friends</h2>
+        <ul>
+            <li>Jane Doe</li>
+            <li>John Doe</li>
+            <li>Alice Smith</li>
+            <!-- Add more friends as needed -->
+        </ul>
+    </div>
+    <div id="chat-list">
+        <h2>Chat List</h2>
+        <ul>
+            <li>John Doe</li>
+            <li>Alice Smith</li>
+            <!-- Add more chat contacts as needed -->
+        </ul>
+    </div>
+    <div id="chat">
+        <div id="chat-messages">
+            <p><strong>John Doe:</strong> Hello there!</p>
+            <p><strong>You:</strong> Hi! How are you?</p>
+            <!-- Add more chat messages as needed -->
+        </div>
+        <div id="text-bar">
+            <input type="text" placeholder="Type your message here">
+            <button>Send</button>
+        </div>
+    </div>
+</div>
+<style>
+    #main-body {
+        display: flex;
+        flex-direction: row;
+        flex: 1;
+    }
+  
+    #teacher-list,
+    #friend-list,
+    #chat,
+    #chat-list {
+        flex: 1;
+        box-sizing: border-box;
+        padding: 10px;
+        width: auto !important; /* Reset the width to auto to allow for the new percentages */
+    }
+  
+    #teacher-list {
+        border: solid black 2px;
+        max-width: 20% !important; /* Set the maximum width to 25% */
+        background-color: #f0f0f0;
+        padding: 20px;
+    }
+  
+    #friend-list {
+        border: solid black 2px;
+        max-width: 20% !important; /* Set the maximum width to 50% */
+        background-color: #f0f0f0;
+        padding: 20px;
+    }
+  
+    #chat-list {
+        border: solid black 2px;
+        max-width: 20% !important; /* Set the maximum width to 25% */
+        background-color: #f0f0f0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+  
+    #chat {
+        border: solid black 2px;
+        max-width: 40% !important; /* Set the maximum width to 25% */
+        background-color: #f0f0f0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+  
+    /* Styles for the chat messages */
+    #chat-messages {
+        flex: 1;
+        overflow-y: auto;
+    }
+  
+    #chat-messages p {
+        margin: 10px 0;
+        padding: 5px;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+    }
+  
+    #chat-messages strong {
+        color: #555;
+    }
+  
+    /* Styles for the text bar */
+    #text-bar {
+        display: flex;
+        align-items: center;
+        margin-top: 20px;
+    }
+  
+    #text-bar input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 5px 0 0 5px;
+    }
+  
+    #text-bar button {
+        padding: 8px 12px;
+        background-color: #007bff;
+        border: none;
+        border-radius: 0 5px 5px 0;
+        color: #fff;
+        cursor: pointer;
+    }
+</style>
+
+{% endblock %}
+
