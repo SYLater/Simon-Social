@@ -1,0 +1,18 @@
+<html>
+    <body>
+        <div id="tasks-div"></div>
+        <h3>Current tasks</h3>
+        {% for i in data %}
+        <div class="classes" id="{{i}}">
+            <h4>{{i}}</h4>
+            <p>task 1</p>
+            <p>task 2</p>
+        </div>
+        {% endfor %}
+        <div id="add-task-div">
+            <h3>Add Task</h3>
+            <input type="text" id="add-task-input">
+            <button type="submit" class="btn btn-primary" id="add-task">Add Task</button>
+        </div>
+    </body>
+</html>

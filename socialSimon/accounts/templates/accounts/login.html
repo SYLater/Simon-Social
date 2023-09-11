@@ -1,15 +1,62 @@
+{% block title %} Login {% endblock %}
+{% load crispy_forms_tags %}
 <title>SS Login</title>
 <html>
-    {% load static %}
-    <link rel="stylesheet" href="{% static  'accounts/login.css' %}">
+{% load static %}
+<link rel="stylesheet" href="{% static  'accounts/login.css' %}">
+
 <body>
     <div id="login-body">
         <h1 id="login-header">Login with Simon</h1>
-        <div id="input">
-            <input type="text" id="email-input" placeholder="Email">
-            <input type="password" id="password-input" placeholder="Password">
-            <button id="login-button" onclick="location.href='/dashboard'">Login</button>
+
+        <!-- Display custom messages -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert {{ message.tags }}">
+            {{ message }}
         </div>
+        {% endfor %}
+        {% endif %}
+
+        <div id="input">
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- Link input field to Django's authentication system -->
+                <input type="text" name="user_email" id="email-input" placeholder="Email">
+                <input type="password" name="password" id="password-input" placeholder="Password">
+
+                <!-- Display form errors -->
+                {% if form.non_field_errors %}
+                <div class="error">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <button type="submit" id="login-button">Login</button>
+            </form>
+        </div>
+        <button id="test-button">Test</button>
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+    $(document).ready(function(){
+        $('#test-button').click(function(){
+            $.ajax({
+                url: 'scrap/',
+                method: 'GET',
+                success: function(response){
+                    // Do something with the response if needed
+                    // No popup will appear now
+                },
+                error: function(error){
+                    console.log(error);
+                }
+            });
+        });
+    });
+        </script>
     </div>
 </body>
+
 </html>
