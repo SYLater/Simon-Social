@@ -4,4 +4,5 @@ from . import views
 
 urlpatterns = [
     path("", views.dashboard, name="student-dashboard"),
+    path('timetable/', views.timetable, name='timetable'),
 ]

@@ -1,16 +1,17 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <style>
     .container {
         color: black;
+        display: flex;
     }
+
 </style>
 <div class="container">
-    <div>
+    <div class="card">
         <!-- Timetable here -->
-        {% include "dashboard/timetable.html" %}
+        {% include "dashboard/timetable.html" with period_data=period_data %}
     </div>
 </div>
 {% endblock %}

@@ -1,6 +1,23 @@
-
-
 <div>
-    <p>This is the timetable</p>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Period</th>
+                <th>Class Code</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in period_data %}
+            <tr>
+                <td>{{ data.period }}</td>
+                <td>{{ data.class_code }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
-
+<style>
+    .table {
+        color: white;
+    }
+</style>

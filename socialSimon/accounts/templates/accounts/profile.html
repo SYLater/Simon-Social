@@ -20,6 +20,13 @@
                 </div>
             </div>
         </div>
+    </div>
+    <div>
+        <h1>Classes</h1>
+        {% for cls in user_classes %}
+            <p>{{ cls.class_teacher }} {{ cls.class_description }}</p>
+        {% endfor %}
+    </div>
 </div>
 
 {% endblock %}

@@ -1,4 +1,5 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager,
+                                        PermissionsMixin)
 from django.db import models
 
 class CustomUserManager(BaseUserManager):
@@ -16,8 +17,6 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(user_email, password, **extra_fields)
 
-from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 
 class User(AbstractBaseUser, PermissionsMixin):
     user_id = models.AutoField(primary_key=True)
@@ -66,9 +65,25 @@ class UserFriendsRelationship(models.Model):
     def __str__(self):
         return f"{self.user} - {self.friend}"
 
+class Class(models.Model):
+    class_id = models.AutoField(primary_key=True)
+    class_code = models.CharField(max_length=255)
+    class_description = models.TextField(blank=True, null=True)
+    class_domain = models.CharField(max_length=255, blank=True, null=True)
+    class_campus = models.CharField(max_length=255, blank=True, null=True)
+    class_teacher = models.CharField(max_length=255, blank=True, null=True)
+    class_teacher_code = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.class_code
+
+
 class UserClassesRelationship(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_classes')
-    class_id = models.PositiveIntegerField()
+    class_id = models.ForeignKey(Class, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.user} - {self.class_id.class_code}"
 
     def __str__(self):
         return f"{self.user} - {self.class_id}"

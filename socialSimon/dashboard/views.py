@@ -1,7 +1,12 @@
+import re
+from bs4 import BeautifulSoup
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 import requests
 import json
+from datetime import datetime
+
+from accounts.views import extract_timetable_data
 
 common_headers = {
     'Accept-Encoding': 'gzip, deflate, br',
@@ -15,54 +20,71 @@ common_headers = {
     'sec-ch-ua-platform': '"Windows"'
 }
 
-def fetch_timetable(cookies):
+
+
+
+
+def get_user_classes(user):
+    """Retrieve classes for a given user."""
+    # Query the UserClassesRelationship model to get related classes
+    related_classes = user.user_classes.all()
     
-        url = 'https://intranet.padua.vic.edu.au/WebModules/Timetables/MasterTimetable.aspx'
-        
-        headers = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'keep-alive',
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Host': 'intranet.padua.vic.edu.au',
-            'Origin': 'https://intranet.padua.vic.edu.au',
-            'Referer': 'https://intranet.padua.vic.edu.au/WebModules/Timetables/MasterTimetable.aspx',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'same-origin',
-            'Sec-Fetch-User': '?1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
-            'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-            **common_headers  # Adding the common headers
-        }
-        
-        payload_data = {}  # TODO: Fill in the payload data as required by the server.
-        
-        response = requests.post(url, headers=headers, cookies=cookies, data=payload_data)
-        
-        return response.text
+    # Extract the actual Class instances from the relationships
+    classes = [relation.class_id for relation in related_classes]
+    
+    return classes
+
+def generate_timetable_data(current_user):
+    cookies = json.loads(current_user.cookies)
+    print('hi')
+    # Fetch Master timetable data
+    timetable_data = extract_timetable_data(cookies)
+
+    all_periods = ["Homeroom", "Period 1", "Period 2", "Period 3", "Period 4", "Period 5"]
+    user_classes = get_user_classes(current_user)
+    current_date = datetime.now()
+    formatted_date_alternative = f"{current_date.strftime('%A')} {current_date.day}/{current_date.month}"
+
+    # List to store each period's data
+    period_data = []
+
+    for period in all_periods:
+        class_for_period = "No class"
+        for timetable in timetable_data:
+            if 'Date' in timetable:
+                if formatted_date_alternative in timetable['Date']:
+                    for key, value in timetable.items():
+                        if key == period:
+                            for user_class in user_classes:
+                                class_code = user_class.class_code
+                                for data in value:
+                                    if class_code in data:
+                                        class_for_period = class_code
+                                        break
+                                if class_for_period != "No class":
+                                    break
+        period_data.append({'period': period, 'class_code': class_for_period})
+
+    return period_data
 
 def dashboard(request):
-    # Fetch timetable data
-    cookies = json.loads(request.user.cookies)
-    timetable_data = fetch_timetable(cookies)
-    print(timetable_data)
+    period_data = generate_timetable_data(request.user) 
     context = {
-        'student': request.user,  # Assuming the user model has the necessary attributes
-        'timetable': timetable_data  # Pass the timetable data to the template
+        'student': request.user,
+        'period_data': period_data
     }
     return render(request, 'dashboard/dashboard.html', context)
 
-
-
 def timetable(request):
-    user = request.user
-    cookies = json.loads(user.cookies)
-    timetable = fetch_timetable(cookies)
-    print(timetable)
+    # Generate the timetable data for the user
+    period_data = generate_timetable_data(request.user)
 
-    return render(request, 'dashboard/timetable.html')
+    # Create the context dictionary with the user and timetable data
+    context = {
+        'student': request.user,
+        'period_data': period_data
+    }
+
+    # Render the timetable page using the context
+    return render(request, 'dashboard/timetable.html', context)
 
