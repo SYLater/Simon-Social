@@ -6,12 +6,17 @@
         color: black;
         display: flex;
     }
-
 </style>
+
 <div class="container">
     <div class="card">
         <!-- Timetable here -->
         {% include "dashboard/timetable.html" with period_data=period_data %}
     </div>
+    <div class="card">
+        {% include "tasks/tasks.html" %}
+    </div>
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 {% endblock %}

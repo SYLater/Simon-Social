@@ -20,7 +20,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from .forms import UserLoginForm
-from .models import StudentProfile, User, Class, UserClassesRelationship
+from .models import Class, StudentProfile, User, UserClassesRelationship
 
 common_headers = {
     'Accept-Encoding': 'gzip, deflate, br',
@@ -121,10 +121,6 @@ def extract_timetable_data(cookies):
 
     return cleaned_extracted_data
 
-# NOTE: The function is now updated. However, I cannot run this function directly since it relies on a function 
-# `read_data_from_json` and other external dependencies that are not provided.
-
-
 def fetch_all_classes(request):
     #define user & cookies
     current_user = request.user
@@ -138,37 +134,40 @@ def fetch_all_classes(request):
     return all_classes
                 
 
-def fetch_user_classes(current_user, cookies):
-    studentID = StudentProfile.objects.get(user=current_user).StudentID	# StudentID for the request 
-    cookies = json.loads(cookies) # Cookies for the request
+import json
+import requests
 
+def fetch_user_classes(current_user, cookies):
+
+    # Get the student ID for the request
+    student_id = StudentProfile.objects.get(user=current_user).StudentID
+
+    # Parse the cookies for the request
+    cookies = json.loads(cookies)
+
+    # Define the URL and headers for the user information request
     user_info_url = 'https://intranet.padua.vic.edu.au/Default.asmx/UserInformation'
     user_info_headers = {
         **common_headers,
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
-        'Referer': f'https://intranet.padua.vic.edu.au/profiles/students/{studentID}/aspx/GeneralInformation/StudentProfileTimetable.aspx/',
+        'Referer': f'https://intranet.padua.vic.edu.au/profiles/students/{student_id}/aspx/GeneralInformation/StudentProfileTimetable.aspx/',
     }
+
+    # Prepare the payload for the request
     payload = json.dumps({})
+
+    # Send the user information request
     response = requests.post(user_info_url, headers=user_info_headers, cookies=cookies, data=payload)
     
-   
-    
-    data1 = response.json()
-    # Assuming the JSON data is stored in a variable named 'data'
+    # Extract the JSON data from the response
+    data = response.json()
 
-    learning_areas_classes = []
-    for item in data1['d']["menuItems"]["O"]:
-        if item[0].startswith('LEARNINGAREASCLS'):
-            learning_areas_classes.append(item)
+    # Filter and extract the learning areas classes from the data
+    learning_areas_classes = [item for item in data['d']["menuItems"]["O"] if item[0].startswith('LEARNINGAREASCLS')]
 
-    # Now, the 'learning_areas_classes' list contains all the items with keys starting with "LEARNINGAREASCLS"
-    # You can access and manipulate this data as needed.
-
-    classes = []
-    # For example, to print the information about these classes:
-    for class_item in learning_areas_classes:
-        classes.append(class_item[5])
+    # Extract the class information from the learning areas classes
+    classes = [class_item[5] for class_item in learning_areas_classes]
 
     return classes
 
@@ -177,10 +176,14 @@ def login(request):
         form = UserLoginForm(request.POST)
         
         if form.is_valid():
+            # Extract user email and password from form data
             user_email = form.cleaned_data['user_email']
             password = form.cleaned_data['password']
+            
+            # Split email to get username
             if "@" in user_email:
-                         username = user_email.split("@")[0]
+                username = user_email.split("@")[0]
+            
             # Check if user exists in Django database
             user = authenticate(user_email=user_email, password=password)
             if user:
@@ -191,6 +194,7 @@ def login(request):
             success, data = simonAuthChk(username=username, password=password)
 
             if success:
+                # Create or get User instance
                 user_instance, created = User.objects.get_or_create(user_email=user_email, user_userName=username)
                 
                 if created:
@@ -221,6 +225,7 @@ def login(request):
                     NoteImportantCount=data['profile_details']['d']['NoteImportantCount'],
                     ImportantMedicalWarning=data['profile_details']['d']['ImportantMedicalWarning']
                 )
+                # Authenticate and login user
                 user = authenticate(username=user_email, password=password)
                 auth_login(request, user)
                 return redirect("/dashboard")
@@ -231,17 +236,24 @@ def login(request):
             form = UserLoginForm()
     else:
         form = UserLoginForm()
+    
+    # Render login form
     return render(request, "accounts/login.html", {'form': form})
 
 def update_all_classes(request):
+    # Delete all existing classes
     Class.objects.all().delete()
+
+    # Fetch all classes from the request
     all_classes = fetch_all_classes(request)
+
+    # Iterate over each class item
     for class_item in all_classes:
+        # Extract the teacher code from the teacher name
         match = re.search(r'\((\w+)\)', class_item["Teacher Name"])
-        if match:
-            teacher_code = match.group(1)
-        else:
-            teacher_code = None
+        teacher_code = match.group(1) if match else None
+
+        # Create a new class instance
         new_class = Class(
             class_code=class_item["Class Code"],
             class_description=class_item["Class Description"],
@@ -249,13 +261,17 @@ def update_all_classes(request):
             class_campus=class_item["Campus"],
             class_teacher=class_item["Teacher Name"],
             class_teacher_code=teacher_code
-            )
+        )
+        
+        # Save the new class instance
         new_class.save()
 
 def add_student_to_class(student, class_code):
     try:
+        # Get the target class based on the class code
         target_class = Class.objects.get(class_code=class_code)
     except ObjectDoesNotExist:
+        # If the class does not exist, print an error message and return
         print(f"Class with code {class_code} not found.")
         return
 
@@ -264,49 +280,62 @@ def add_student_to_class(student, class_code):
     relationship.save()
 
 def get_user_classes(user):
-    """Retrieve classes for a given user."""
     # Query the UserClassesRelationship model to get related classes
     related_classes = user.user_classes.all()
-    
+
     # Extract the actual Class instances from the relationships
     classes = [relation.class_id for relation in related_classes]
-    
+
     return classes
 
+import re
+
 def profile(request):
+    # Get the value of the clicked button
     button_clicked = request.POST.get('whichButton')
+    
+    # Get the current user
     current_user = request.user
+    
     if button_clicked == 'sync':
+        # Get the class codes for the student
         class_codes = []
         student_classes = fetch_user_classes(request.user, request.user.cookies)
         pattern = r'\((\d[A-Z\d]+)\)'  # Matches a number followed by uppercase letters and numbers inside parentheses
+        
+        # Extract the class codes from the student's classes
         for classes in student_classes:
             match = re.search(pattern, classes)
             if match:
                 class_codes.append(match.group(1))
+        
+        # Add the student to each class
         for class_code in class_codes:
             add_student_to_class(request.user, class_code)
 
         print("Button 1")
         
     elif button_clicked == 'button2':
-        
         print("Button 2")
+    
+    # Get the classes of the current user
     user_classes = get_user_classes(current_user)
+    
+    # Prepare the context for the template
     context = {
         'student': request.user,  # Assuming the user model has the necessary attributes
         "user_classes": user_classes
     }
+    
+    # Render the profile page with the context
     return render(request, "accounts/profile.html", context)
 
 
 def display_image(request):
-    current_user = request.user
-    cookiesvalues = current_user.cookies
-    cookies = json.loads(cookiesvalues)
+    cookies = json.loads(request.user.cookies)
     # Specify the URL to fetch the image from
-    StudentID = StudentProfile.objects.get(user=current_user).StudentID
-    print(StudentID)
+    StudentID = StudentProfile.objects.get(user=request.user).StudentID
+    # Define the URL to fetch the image
     url = f"https://intranet.padua.vic.edu.au/WebHandlers/DisplayUserPhoto.ashx?StudentID={StudentID}"
 
     # Define the headers based on the provided information
@@ -333,22 +362,26 @@ def display_image(request):
         # Return the image content as a response
         return HttpResponse(response.content, content_type='image/jpeg')
     else:
+        # Return an error message
         return HttpResponse("Failed to fetch the image", status=400)
 
-import requests
+
 
 
 def simonAuthChk(username, password):
-    # helium 3.2.5
-
+    # Set the path to the chromedriver executable
     chromedriver_path = 'accounts/chromedriver.exe'  # Update this path
 
+    # Set the URL of the login page
     url = 'https://intranet.padua.vic.edu.au/Login/Default.aspx?ReturnUrl=%2F'
 
+    # Create a WebDriver service using the chromedriver executable
     service = Service(executable_path=chromedriver_path)
-    driver = start_chrome(url, headless=False)
 
-    # Fill in login details
+    # Start a new Chrome browser session
+    driver = start_chrome(url, headless=True)
+
+    # Fill in the login details
     write(username, into='Username')
     write(password, into='Password')
 
@@ -356,6 +389,7 @@ def simonAuthChk(username, password):
     click(('Sign in'))
 
     try:
+        # Wait for the element containing the four-digit number to be present
         wait = WebDriverWait(driver, 10)
         wait.until(EC.presence_of_element_located(
             (By.XPATH, '/html/body/div[2]/div[1]/nav/div[1]/div[1]/div[2]/div/a[1]')))
@@ -382,7 +416,6 @@ def simonAuthChk(username, password):
             'adAuthCookie': cookies[0]["value"],
         }
 
-
         all_data = {}
 
         # Fetch profile details
@@ -399,8 +432,12 @@ def simonAuthChk(username, password):
                 profile_details_url, headers=profile_headers, cookies=cookies, data=payload)
             return response.json()
 
+        # Fetch profile details and add them to the all_data dictionary
         all_data['profile_details'] = fetch_profile_details(studentID)
         all_data['cookies'] = cookies
+
+        print('worked')
+       
 
         print('worked')
         driver.close()
@@ -409,7 +446,7 @@ def simonAuthChk(username, password):
         print("Timeout")
         print(f"An error occurred: {e}")
         driver.close()
-        return False, None  # Make sure to return a tuple
+        return False, None 
 
 
 def simonScrap(username, password):

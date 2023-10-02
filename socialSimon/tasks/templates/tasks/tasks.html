@@ -1,18 +1,110 @@
-<html>
-    <body>
-        <div id="tasks-div"></div>
-        <h3>Current tasks</h3>
-        {% for i in data %}
-        <div class="classes" id="{{i}}">
-            <h4>{{i}}</h4>
-            <p>task 1</p>
-            <p>task 2</p>
+<div>
+        <!-- Tasks here -->
+        <h2>Tasks</h2>
+        <ul>
+            {% for task in tasks %}
+            <li>
+                {{ task.title }} - Due: {{ task.due_date }}
+                <button class="btn btn-sm btn-primary editBtn" data-id="{{ task.id }}">Edit</button>
+                <button class="btn btn-sm btn-danger deleteBtn" data-id="{{ task.id }}">Delete</button>
+            </li>
+        {% endfor %}        
+        </ul>
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addTaskModal">
+            Add Task
+        </button>
+        
+        <!-- Modal -->
+        <div class="modal fade" id="addTaskModal" tabindex="-1" role="dialog" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addTaskModalLabel">Add Task</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="taskForm">
+                            <!-- The form fields will be rendered here using JavaScript -->
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="saveTaskBtn">Save Task</button>
+                    </div>
+                </div>
+            </div>
         </div>
-        {% endfor %}
-        <div id="add-task-div">
-            <h3>Add Task</h3>
-            <input type="text" id="add-task-input">
-            <button type="submit" class="btn btn-primary" id="add-task">Add Task</button>
-        </div>
-    </body>
-</html>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript">
+    // Using jQuery to set the CSRF token for AJAX requests
+    $(function() {
+        $.ajaxSetup({
+            headers: { "X-CSRFToken": '{{ csrf_token }}' }
+        });
+    });
+
+    $(document).ready(function(){
+        // When the modal is shown, load the form
+        $('#addTaskModal').on('show.bs.modal', function (event) {
+            $.ajax({
+                url: '/tasks/create_task/',  // Adjust this path to your view's URL
+                type: 'GET',
+                dataType: 'html',
+                success: function(data) {
+                    $('#taskForm').html(data);
+                }
+            });
+        });
+
+       // Handle the form submission (both for add and edit)
+       $('#saveTaskBtn').click(function(){
+        // Determine the URL based on whether it's an edit or create operation
+        let actionUrl = $('#taskForm').attr('data-task-id') ? '/tasks/edit_task/' + $('#taskForm').attr('data-task-id') + '/' : '/tasks/create_task/';
+        $.post(actionUrl, $('#taskForm').serialize(), function(response) {
+            if(response.success){
+                location.reload(); // Reload the page or update the task list
+            } else {
+                // Display errors or handle the failed submission
+                alert('Failed to save task.');
+            }
+        });
+    });
+        // Edit Task
+        $('.editBtn').click(function(){
+        const taskId = $(this).data('id');
+        $.ajax({
+            url: '/tasks/edit_task/' + taskId + '/',  // Adjust to your edit view's URL
+            type: 'GET',
+            dataType: 'html',
+            success: function(data) {
+                $('#taskForm').html(data);
+                $('#addTaskModal').modal('show');  // Show the modal with the loaded form
+            }
+        });
+    });
+
+    // Delete Task
+    $('.deleteBtn').click(function(){
+        const taskId = $(this).data('id');
+        if(confirm("Are you sure you want to delete this task?")) {
+            $.ajax({
+                url: '/tasks/delete_task/' + taskId + '/',  // Adjust this path to your delete view's URL
+                type: 'DELETE',
+                success: function(response) {
+                    if(response.success){
+                        location.reload(); // Reload the page or update the task list
+                    } else {
+                        // Display errors or handle the failed deletion
+                        alert('Failed to delete task.');
+                    }
+                }
+            });
+        }
+    });
+        
+    });
+    
+
+</script>

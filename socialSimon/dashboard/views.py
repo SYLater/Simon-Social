@@ -7,6 +7,7 @@ import json
 from datetime import datetime
 
 from accounts.views import extract_timetable_data
+from tasks.models import Task
 
 common_headers = {
     'Accept-Encoding': 'gzip, deflate, br',
@@ -20,10 +21,6 @@ common_headers = {
     'sec-ch-ua-platform': '"Windows"'
 }
 
-
-
-
-
 def get_user_classes(user):
     """Retrieve classes for a given user."""
     # Query the UserClassesRelationship model to get related classes
@@ -34,46 +31,72 @@ def get_user_classes(user):
     
     return classes
 
+from datetime import datetime
+import json
+
 def generate_timetable_data(current_user):
+
+    # Convert cookies string to dictionary
     cookies = json.loads(current_user.cookies)
-    print('hi')
+
     # Fetch Master timetable data
     timetable_data = extract_timetable_data(cookies)
 
     all_periods = ["Homeroom", "Period 1", "Period 2", "Period 3", "Period 4", "Period 5"]
+
+    # Get user's classes
     user_classes = get_user_classes(current_user)
+
+    # Get current date
     current_date = datetime.now()
+
+    # Format date as "Day Month/Day"
     formatted_date_alternative = f"{current_date.strftime('%A')} {current_date.day}/{current_date.month}"
 
-    # List to store each period's data
+    # List to store each class for each period
     period_data = []
 
+    # Iterate over each period
     for period in all_periods:
         class_for_period = "No class"
+
+        # Iterate over timetable data
         for timetable in timetable_data:
             if 'Date' in timetable:
                 if formatted_date_alternative in timetable['Date']:
+                    # Iterate over period data
                     for key, value in timetable.items():
                         if key == period:
+                            # Iterate over user's classes
                             for user_class in user_classes:
                                 class_code = user_class.class_code
+                                # Iterate over class data
                                 for data in value:
                                     if class_code in data:
                                         class_for_period = class_code
                                         break
                                 if class_for_period != "No class":
                                     break
+
+        # Add period data to list
         period_data.append({'period': period, 'class_code': class_for_period})
 
     return period_data
 
 def dashboard(request):
     period_data = generate_timetable_data(request.user) 
+
+    tasks = Task.objects.filter(user=request.user)
+
+    # Prepare the context data for rendering the dashboard page
     context = {
         'student': request.user,
-        'period_data': period_data
+        'period_data': period_data,
+        'tasks': tasks   # Add this line
     }
+
     return render(request, 'dashboard/dashboard.html', context)
+
 
 def timetable(request):
     # Generate the timetable data for the user
