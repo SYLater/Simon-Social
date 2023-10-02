@@ -1,48 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<style>
+    .container {
+        color: black;
+    }
+</style>
 <div class="container">
-    <div class="row">
-        <div class="col-md-4">
-            <!-- Profile Section -->
-            <div class="card">
-                <img src="{{ user.user_icon}}" alt="{{ user.user_firstName }}'s Profile Picture" class="card-img-top">
-                <div class="card-body">
-                    <h5 class="card-title">{{ user.user_firstName }}</h5>
-                    <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-8">
-            <!-- Courses Section -->
-            <!-- <div class="card mb-4">
-                <div class="card-header">
-                    <h4>Your Courses</h4>
-                </div>
-                <ul class="list-group list-group-flush">
-                    {% for course in student.courses.all %}
-                        <li class="list-group-item">{{ course.name }}</li>
-                    {% empty %}
-                        <li class="list-group-item">You are not enrolled in any courses.</li>
-                    {% endfor %}
-                </ul>
-            </div> -->
-
-            <!-- Announcements Section -->
-            <!-- <div class="card">
-                <div class="card-header">
-                    <h4>Recent Assignments & Announcements</h4>
-                </div>
-                <ul class="list-group list-group-flush">
-                    {% for announcement in recent_announcements %}
-                        <li class="list-group-item">{{ announcement.title }} - {{ announcement.date_posted|date:"F j, Y" }}</li>
-                    {% empty %}
-                        <li class="list-group-item">No recent announcements.</li>
-                    {% endfor %}
-                </ul>
-            </div> -->
-        </div>
+    <div>
+        <!-- Timetable here -->
+        {% include "dashboard/timetable.html" %}
     </div>
 </div>
 {% endblock %}

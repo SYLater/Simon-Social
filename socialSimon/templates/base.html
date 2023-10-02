@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>{% block title %}Default Title{% endblock %}</title>
+    <!-- Custom Styles -->
+    <style>
+      :root {
+        font-family: Myriad-Pro;
+        font-style: normal;
+        font-weight: 300;
+        font-size: 16px;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: #232323;
+        color: white;
+        margin: 0;
+        padding: 0;
+      }
+
+
+      .dropdown {
+        position:absolute;
+        display: inline-block;
+        right: 0;
+        padding: 0;
+      }
+      .dropdown-menu {
+
+        min-width: 0;
+    
+        }
+
+        .dropdown-item {
+          padding-left: 15px;
+          padding-right: 15px;
+        }
+
+      .icon {
+        position: inherit;
+        height: 20px;
+        width: 20px;
+        border-radius: 50%;
+        right: 95%;
+        top: 11%;
+        object-fit: cover;
+      }
+
+      .container {
+        padding-top: 1.5rem;
+      }
+    </style>
+
+
+  </head>
+
+  <body>
+    <!-- Navbar -->
+<!-- Navbar -->
+<header>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="/dashboard">Home</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/calculator">Grade Average Calculator</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/chat">Chat</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/suggestions">Suggestions</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/taskTracker">Task Tracker</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
+                        <img src="/account/display_image" alt="User Icon" class="icon"> {{ user.user_firstName }}
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <a class="dropdown-item" href="/account/profile">Account</a>
+                        <a class="dropdown-item" href="/logout">Logout</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</header>
+
+
+   <!-- Main Content -->
+   <div class="container mt-4">
+    {% block content %}
+    <!-- Default content can go here, or it can be left empty -->
+    {% endblock %}
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="{% static 'js/index.js' %}"></script>
+</body>
+
+</html>

@@ -4,7 +4,7 @@ import re  # for regular expression
 import requests
 from bs4 import BeautifulSoup
 from django.contrib import messages
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
@@ -17,51 +17,53 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from .models import StudentProfile
+from .forms import UserLoginForm
+from .models import StudentProfile, User
 
-from .forms import UserRegistrationForm
 
+common_headers = {
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Connection': 'keep-alive',
+    'Host': 'intranet.padua.vic.edu.au',
+    'Origin': 'https://intranet.padua.vic.edu.au',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+    'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"'
+}
 
 def login(request):
-    form = UserRegistrationForm(request.POST)
     if request.method == "POST":
+        form = UserLoginForm(request.POST)
+        
         if form.is_valid():
             user_email = form.cleaned_data['user_email']
             password = form.cleaned_data['password']
-
-            print("Username: " + user_email, " Password: " + password) 
-
+            if "@" in user_email:
+                         username = user_email.split("@")[0]
             # Check if user exists in Django database
-            user = authenticate(username=user_email, password=password)
-
-            if user is not None:
-                print("User authenticated")
+            user = authenticate(user_email=user_email, password=password)
+            if user:
                 auth_login(request, user)
-                return redirect("/")
-            
-            success ,data = simonAuthChk(username=user_email, password=password)
+                return redirect("/dashboard")
 
-            if success:  # Check with Simon
+            # Check with external system if local authentication fails
+            success, data = simonAuthChk(username=username, password=password)
 
-                print("User authenticated with Simon")
+            if success:
+                user_instance, created = User.objects.get_or_create(user_email=user_email, user_userName=username)
                 
-                user_instance = form.save(commit=False)  # Don't commit yet, we'll update some fields
-                print("Created user in database")
+                if created:
+                    if "@" in user_email:
+                        user_instance.user_userName = user_email.split("@")[0]
+                    user_instance.set_password(password)  # Use Django's built-in password hashing
 
-                # Update User instance with new data
-                FullName = data['profile_details']['d']['FullName']
-                first_name, last_name = FullName.split(" ", 1)
-
-                if "@" in user_email:
-                    user_instance.user_Name = user_email.split("@")[0]
-                    user_instance.user_email = user_email
-                else:
-                    user_instance.user_Name = user_email
-                user_instance.user_firstName = first_name
-                user_instance.user_lastName = last_name
-                user_instance.cookies = json.dumps(data['cookies'])
-                
-                user_instance.save()  # Now save the User instance
+                    # Update User instance with fetched data
+                    user_instance.user_firstName = data['profile_details']['d']['FullName'].split(" ", 1)[0]
+                    user_instance.user_lastName = data['profile_details']['d']['FullName'].split(" ", 1)[1]
+                    user_instance.cookies = json.dumps(data['cookies'])
+                    user_instance.save()
 
                 # Create and save the associated StudentProfile
                 StudentProfile.objects.create(
@@ -69,7 +71,6 @@ def login(request):
                     studentGUID=data['profile_details']['d']['UserGUID'],
                     communityID=data['profile_details']['d']['CommunityID'],
                     communityUID=data['profile_details']['d']['UID'],
-                    FullName=FullName,
                     YearLevelCode=data['profile_details']['d']['YearLevelCode'],
                     HouseDescription=data['profile_details']['d']['HouseDescription'],
                     HomeroomCode=data['profile_details']['d']['HomeroomCode'],
@@ -81,53 +82,107 @@ def login(request):
                     NoteImportantCount=data['profile_details']['d']['NoteImportantCount'],
                     ImportantMedicalWarning=data['profile_details']['d']['ImportantMedicalWarning']
                 )
-                return redirect('login')
+                user = authenticate(username=user_email, password=password)
+                auth_login(request, user)
+                return redirect("/dashboard")
             else:
-                print("Incorrect credentials or you don't have a Simon account.")
                 messages.error(request, "Incorrect credentials or you don't have a Simon account.")
-    
+        else:
+            messages.error(request, "Invalid form submission.")
+            form = UserLoginForm()
     else:
-        form = UserRegistrationForm()
-       
-    return render(request, "accounts/login.html", {"form": form})
+        form = UserLoginForm()
+    return render(request, "accounts/login.html", {'form': form})
 
-def scrap(request):
-    print("Scraping")
+from django.core.files.base import ContentFile
 
-    result = simonAuthChk(username="milll18@s.padua.vic.edu.au", password="ghd931PC")
-    if result is not None:
-        success, data = result
-        print("Authentication successful.")
+def profile(request):
+    button_clicked = request.POST.get('whichButton')
+    if button_clicked == 'sync':
+
+        def fetch_user_info(studentID, cookies):
+            user_info_url = 'https://intranet.padua.vic.edu.au/Default.asmx/UserInformation'
+            user_info_headers = {
+                **common_headers,
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json',
+                'Referer': f'https://intranet.padua.vic.edu.au/profiles/students/{studentID}/aspx/GeneralInformation/StudentProfileTimetable.aspx/',
+            }
+            payload = json.dumps({})
+            response = requests.post(
+                user_info_url, headers=user_info_headers, cookies=cookies, data=payload)
+            return response.json()
+        current_user = request.user
+        cookiesvalues = current_user.cookies
+        cookies = json.loads(cookiesvalues)
+        studentGUID = StudentProfile.objects.get(user=current_user).StudentID	
+        data1 = fetch_user_info(studentGUID, cookies)
+        # Assuming the JSON data is stored in a variable named 'data'
+
+        learning_areas_classes = []
+        for item in data1['d']["menuItems"]["O"]:
+            if item[0].startswith('LEARNINGAREASCLS'):
+                learning_areas_classes.append(item)
+
+        # Now, the 'learning_areas_classes' list contains all the items with keys starting with "LEARNINGAREASCLS"
+        # You can access and manipulate this data as needed.
+
+        # For example, to print the information about these classes:
+        for class_item in learning_areas_classes:
+            print("Class Name:", class_item[5])
+            print()
+        
+    elif button_clicked == 'button2':
+        print("Button 2")
+    return render(request, "accounts/profile.html")
+
+
+def display_image(request):
+    current_user = request.user
+    cookiesvalues = current_user.cookies
+    cookies = json.loads(cookiesvalues)
+    # Specify the URL to fetch the image from
+    StudentID = StudentProfile.objects.get(user=current_user).StudentID
+    print(StudentID)
+    url = f"https://intranet.padua.vic.edu.au/WebHandlers/DisplayUserPhoto.ashx?StudentID={StudentID}"
+
+    # Define the headers based on the provided information
+    headers = {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "accept-language": "en-US,en;q=0.9",
+        "cache-control": "no-cache",
+        "pragma": "no-cache",
+        "sec-ch-ua": "\"Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"116\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "none",
+        "sec-fetch-user": "?1",
+        "upgrade-insecure-requests": "1"
+    }
+
+    # Make the GET request
+    response = requests.get(url, headers=headers, cookies=cookies)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Return the image content as a response
+        return HttpResponse(response.content, content_type='image/jpeg')
     else:
-        print("Authentication failed.")
-        return redirect("/login")
-    
-    studentGUID = data['profile_details']['d']['UserGUID']
-    communityID = data['profile_details']['d']['CommunityID']
-    communityUID = data['profile_details']['d']['UID']
-    FullName = data['profile_details']['d']['FullName']
-    first_name, last_name = FullName.split(" ", 1)
-    YearLevelCode = data['profile_details']['d']['YearLevelCode']
-    HouseDescription = data['profile_details']['d']['HouseDescription']
-    HomeroomCode = data['profile_details']['d']['HomeroomCode']
-    HomeroomDescription = data['profile_details']['d']['HomeroomDescription']
-    HomeroomTeachers = data['profile_details']['d']['HomeroomTeachers']  # This is a list
-    StudentID = data['profile_details']['d']['StudentID']
-    StudentPersonalRefId = data['profile_details']['d'].get('StudentPersonalRefId', None)  # Using get in case the key doesn't exist
-    NoteCount = data['profile_details']['d']['NoteCount']
-    NoteImportantCount = data['profile_details']['d']['NoteImportantCount']
-    ImportantMedicalWarning = data['profile_details']['d']['ImportantMedicalWarning']
+        return HttpResponse("Failed to fetch the image", status=400)
 
-    return redirect("/login")
+import requests
+
 
 def simonAuthChk(username, password):
-    #helium 3.2.5
+    # helium 3.2.5
 
-    chromedriver_path  = 'accounts/chromedriver.exe'  # Update this path
+    chromedriver_path = 'accounts/chromedriver.exe'  # Update this path
 
     url = 'https://intranet.padua.vic.edu.au/Login/Default.aspx?ReturnUrl=%2F'
 
-    service = Service(executable_path=chromedriver_path )
+    service = Service(executable_path=chromedriver_path)
     driver = start_chrome(url, headless=False)
 
     # Fill in login details
@@ -139,12 +194,12 @@ def simonAuthChk(username, password):
 
     try:
         wait = WebDriverWait(driver, 10)
-        wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/noscript')))
-        
+        wait.until(EC.presence_of_element_located(
+            (By.XPATH, '/html/body/div[2]/div[1]/nav/div[1]/div[1]/div[2]/div/a[1]')))
 
-        wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[2]/div[1]/nav/div[1]/div[1]/div[2]/div/a[1]')))    
         # Locate the element containing the four-digit number
-        element = driver.find_element_by_xpath('/html/body/div[2]/div[1]/nav/div[1]/div[1]/div[2]/div/a[1]')
+        element = driver.find_element_by_xpath(
+            '/html/body/div[2]/div[1]/nav/div[1]/div[1]/div[2]/div/a[1]')
         href = element.get_attribute('href')
 
         # Use regex to extract the number (one or more digits)
@@ -152,90 +207,6 @@ def simonAuthChk(username, password):
         if match:
             studentID = match.group(1)
             print(f"Number: {studentID}")
-
-        # Extract cookies
-        print("Extracting cookies")
-        cookies = driver.get_cookies()
-
-         # Cookies: Extract from your browser and insert here
-        cookies = {
-            'AzureAppProxyAnalyticCookie_1971d3c1-f744-420e-a7b0-2bd2e07a23b5_https_1.3': cookies[1]["value"],
-            'ASP.NET_SessionId': cookies[2]["value"],
-            'adAuthCookie': cookies[0]["value"],
-        }
-
-        # Create a dictionary to hold the headers
-        common_headers = {
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'keep-alive',
-            'Host': 'intranet.padua.vic.edu.au',
-            'Origin': 'https://intranet.padua.vic.edu.au',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
-            'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"'
-        }
-        all_data = {}
-
-        # Fetch profile details
-        profile_details_url = 'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/StudentProfiles.asmx/StudentProfileDetails'
-        profile_headers = {
-            **common_headers,
-            'Accept': 'application/json, text/plain, */*',
-            'Content-Type': 'application/json',
-            'Referer': f'https://intranet.padua.vic.edu.au/profiles/students/{studentID}/aspx/GeneralInformation/StudentProfilePersonalDetails.aspx/',
-        }
-        payload = json.dumps({"studentId": studentID})
-        response = requests.post(profile_details_url, headers=profile_headers, cookies=cookies, data=payload)
-        response_dict = response.json()
-        all_data['profile_details'] = response_dict
-        all_data['cookies'] = cookies
-
-        print('worked')
-        driver.close()
-        return True, all_data
-    except Exception as e:
-        print("Timeout")
-        print(f"An error occurred: {e}")
-        driver.close()
-        return False, None  # Make sure to return a tuple
-
-def simonScrap(username, password):
-    #helium 3.2.5
-
-    CHROMEDRIVER_PATH = 'accounts/chromedriver.exe'  # Update this path
-
-    url = 'https://intranet.padua.vic.edu.au/Login/Default.aspx?ReturnUrl=%2F'
-    TimeTable = 'https://intranet.padua.vic.edu.au/WebModules/Timetables/StudentTimetable.aspx'
-
-    service = Service(executable_path=CHROMEDRIVER_PATH)
-    driver = start_chrome(url, headless=True)
-
-    # Fill in login details
-    write(username, into='Username')
-    write(password, into='Password')
-
-    # Click the login button
-    click(('Sign in'))
-
-    try:
-        wait = WebDriverWait(driver, 10)
-        wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/noscript')))
-        print('worked')
-
-        wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[2]/div[1]/nav/div[1]/div[1]/div[2]/div/a[1]')))    
-        # Locate the element containing the four-digit number
-        element = driver.find_element_by_xpath('/html/body/div[2]/div[1]/nav/div[1]/div[1]/div[2]/div/a[1]')
-        href = element.get_attribute('href')
-
-        # Use regex to extract the number (one or more digits)
-        match = re.search(r'/(\d+)/aspx', href)
-        if match:
-            studentID = match.group(1)
-            print(f"Number: {studentID}")
-        
-
 
         # Extract cookies
         print("Extracting cookies")
@@ -248,21 +219,55 @@ def simonScrap(username, password):
             'adAuthCookie': cookies[0]["value"],
         }
 
-        # Create a dictionary to hold the headers
-        common_headers = {
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'keep-alive',
-            'Host': 'intranet.padua.vic.edu.au',
-            'Origin': 'https://intranet.padua.vic.edu.au',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
-            'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"'
-        }
+
         all_data = {}
 
         # Fetch profile details
+        def fetch_profile_details(studentID):
+            profile_details_url = 'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/StudentProfiles.asmx/StudentProfileDetails'
+            profile_headers = {
+                **common_headers,
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json',
+                'Referer': f'https://intranet.padua.vic.edu.au/profiles/students/{studentID}/aspx/GeneralInformation/StudentProfilePersonalDetails.aspx/',
+            }
+            payload = json.dumps({"studentId": studentID})
+            response = requests.post(
+                profile_details_url, headers=profile_headers, cookies=cookies, data=payload)
+            return response.json()
+
+        all_data['profile_details'] = fetch_profile_details(studentID)
+        all_data['cookies'] = cookies
+
+        print('worked')
+        driver.close()
+        return True, all_data
+    except Exception as e:
+        print("Timeout")
+        print(f"An error occurred: {e}")
+        driver.close()
+        return False, None  # Make sure to return a tuple
+
+
+def simonScrap(username, password):
+    # helium 3.2.5
+
+    chromedriver_path = 'accounts/chromedriver.exe'  # Update this path
+
+    url = 'https://intranet.padua.vic.edu.au/Login/Default.aspx?ReturnUrl=%2F'
+
+    service = Service(executable_path=chromedriver_path)
+    driver = start_chrome(url, headless=False)
+
+    # Fill in login details
+    write(username, into='Username')
+    write(password, into='Password')
+
+    # Click the login button
+    click(('Sign in'))
+    all_data = {}
+
+    def fetch_profile_details(studentID):
         profile_details_url = 'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/StudentProfiles.asmx/StudentProfileDetails'
         profile_headers = {
             **common_headers,
@@ -271,29 +276,11 @@ def simonScrap(username, password):
             'Referer': f'https://intranet.padua.vic.edu.au/profiles/students/{studentID}/aspx/GeneralInformation/StudentProfilePersonalDetails.aspx/',
         }
         payload = json.dumps({"studentId": studentID})
-        response = requests.post(profile_details_url, headers=profile_headers, cookies=cookies, data=payload)
-        response_dict = response.json()
-        print(response_dict)
-        all_data['profile_details'] = response_dict
-        all_data['cookies'] = cookies
-        
+        response = requests.post(
+            profile_details_url, headers=profile_headers, cookies=cookies, data=payload)
+        return response.json()
 
-        studentGUID = response_dict['d']['UserGUID']
-        communityID = response_dict['d']['CommunityID']
-        communityUID = response_dict['d']['UID']
-        FullName = response_dict['d']['FullName']
-        YearLevelCode = response_dict['d']['YearLevelCode']
-        HouseDescription = response_dict['d']['HouseDescription']
-        HomeroomCode = response_dict['d']['HomeroomCode']
-        HomeroomDescription = response_dict['d']['HomeroomDescription']
-        HomeroomTeachers = response_dict['d']['HomeroomTeachers']  # This is a list
-        StudentID = response_dict['d']['StudentID']
-        StudentPersonalRefId = response_dict['d'].get('StudentPersonalRefId', None)  # Using get in case the key doesn't exist
-        NoteCount = response_dict['d']['NoteCount']
-        NoteImportantCount = response_dict['d']['NoteImportantCount']
-        ImportantMedicalWarning = response_dict['d']['ImportantMedicalWarning']
-
-        # Fetch dashboard data
+    def fetch_dashboard_data(studentGUID):
         dashboard_url = 'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/GeneralInformation/StudentDashboard.aspx/GetDashboardData'
         dashboard_headers = {
             **common_headers,
@@ -303,11 +290,11 @@ def simonScrap(username, password):
             'Referer': f'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/GeneralInformation/StudentDashboard.aspx?UserGUID={studentGUID}',
         }
         payload = json.dumps({"guidString": studentGUID, "semester": 33})
-        response = requests.post(dashboard_url, headers=dashboard_headers, cookies=cookies, data=payload)
-        response_dict = response.json()
-        all_data['dashboard'] = response_dict
+        response = requests.post(
+            dashboard_url, headers=dashboard_headers, cookies=cookies, data=payload)
+        return response.json()
 
-        # Fetch timetable data
+    def fetch_timetable_data(studentGUID):
         timetable_url = 'https://intranet.padua.vic.edu.au/Default.asmx/GetUserInfo?1693648835712'
         timetable_headers = {
             **common_headers,
@@ -316,11 +303,11 @@ def simonScrap(username, password):
             'X-Requested-With': 'XMLHttpRequest',
             'Referer': f'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/GeneralInformation/StudentProfileTimetable.aspx?UserGUID={studentGUID}',
         }
-        response = requests.post(timetable_url, headers=timetable_headers, cookies=cookies)
-        response_dict = response.json()
-        all_data['timetable'] = response_dict
+        response = requests.post(
+            timetable_url, headers=timetable_headers, cookies=cookies)
+        return response.json()
 
-        # Fetch User Information
+    def fetch_user_info(studentID, studentGUID):
         user_info_url = 'https://intranet.padua.vic.edu.au/Default.asmx/UserInformation'
         user_info_headers = {
             **common_headers,
@@ -328,14 +315,12 @@ def simonScrap(username, password):
             'Content-Type': 'application/json',
             'Referer': f'https://intranet.padua.vic.edu.au/profiles/students/{studentID}/aspx/GeneralInformation/StudentProfileTimetable.aspx/',
         }
-
-        # The payload appears to be just "{}" based on the Content-Length: 2
         payload = json.dumps({})
-        response = requests.post(user_info_url, headers=user_info_headers, cookies=cookies, data=payload)
-        response_dict = response.json()
-        all_data['user_info'] = response_dict
+        response = requests.post(
+            user_info_url, headers=user_info_headers, cookies=cookies, data=payload)
+        return response.json()
 
-        # Fetch Alerts
+    def fetch_alerts(studentGUID):
         alerts_url = 'https://intranet.padua.vic.edu.au/Default.asmx/GetAlerts'
         alerts_headers = {
             **common_headers,
@@ -344,13 +329,11 @@ def simonScrap(username, password):
             'X-Requested-With': 'XMLHttpRequest',
             'Referer': f'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/GeneralInformation/StudentProfileTimetable.aspx?UserGUID={studentGUID}',
         }
+        response = requests.post(
+            alerts_url, headers=alerts_headers, cookies=cookies)
+        return response.json()
 
-        # The Content-Length is 0, so no payload is needed
-        response = requests.post(alerts_url, headers=alerts_headers, cookies=cookies)
-        response_dict = response.json()
-        all_data['alerts'] = response_dict
-
-        # Fetch Messages
+    def fetch_messages(studentGUID):
         get_messages_url = 'https://intranet.padua.vic.edu.au/Default.asmx/GetMessages'
         get_messages_headers = {
             **common_headers,
@@ -359,14 +342,12 @@ def simonScrap(username, password):
             'X-Requested-With': 'XMLHttpRequest',
             'Referer': f'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/GeneralInformation/StudentProfileTimetable.aspx?UserGUID={studentGUID}',
         }
+        payload = json.dumps({})
+        response = requests.post(
+            get_messages_url, headers=get_messages_headers, cookies=cookies, data=payload)
+        return response.json()
 
-        # The payload appears to be empty based on Content-Length: 0
-        payload = json.dumps({})  # Empty payload
-        response = requests.post(get_messages_url, headers=get_messages_headers, cookies=cookies, data=payload)
-        response_dict = response.json()
-        all_data['get_messages'] = response_dict
-
-        # Fetch Medical Student Status
+    def fetch_medical_status(communityID, studentGUID):
         medical_status_url = 'https://intranet.padua.vic.edu.au/Webmodules/medical/Medical.asmx/GETmedicalStudentStatus'
         medical_status_headers = {
             **common_headers,
@@ -375,14 +356,12 @@ def simonScrap(username, password):
             'X-Requested-With': 'XMLHttpRequest',
             'Referer': f'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/MedicalInformation/MedicalStatus.aspx?UserGUID={studentGUID}',
         }
+        payload = json.dumps({"communityID": communityID})
+        response = requests.post(
+            medical_status_url, headers=medical_status_headers, cookies=cookies, data=payload)
+        return response.json()
 
-        # The payload appears to be 22 characters long, replace with your actual payload
-        payload = json.dumps({"communityID": communityID})  # Replace with your actual payload
-        response = requests.post(medical_status_url, headers=medical_status_headers, cookies=cookies, data=payload)
-        response_dict = response.json()
-        all_data['medical_status'] = response_dict
-
-        # Fetch Behavioral History
+    def fetch_behavioural_history(communityUID, YearLevelCode, studentGUID):
         behavioural_history_url = 'https://intranet.padua.vic.edu.au/WebServices/BehaviouralTracking.asmx/GetStudentProfileBehaviouralHistory?1693652261176'
         behavioural_history_headers = {
             **common_headers,
@@ -391,15 +370,16 @@ def simonScrap(username, password):
             'X-Requested-With': 'XMLHttpRequest',
             'Referer': f'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/SocialBehaviour/StudentProfileBehaviouralHistory.aspx?UserGUID={studentGUID}',
         }
+        payload = json.dumps({
+            "selectedAcademicYearID": 21,
+            "communityUID": communityUID,
+            "yearLevelCode": YearLevelCode
+        })
+        response = requests.post(
+            behavioural_history_url, headers=behavioural_history_headers, cookies=cookies, data=payload)
+        return response.json()
 
-        # The payload should be 72 bytes long, replace with your actual payload
-        payload = json.dumps({"selectedAcademicYearID": 21,"communityUID": communityUID ,"yearLevelCode": YearLevelCode})  # Replace with your actual payload
-
-        response = requests.post(behavioural_history_url, headers=behavioural_history_headers, cookies=cookies, data=payload)
-        response_dict = response.json()
-        all_data['behavioural_history'] = response_dict
-
-        # Fetch Behavioral Tracking Commendations
+    def fetch_commendations(studentGUID):
         commendations_url = 'https://intranet.padua.vic.edu.au/WebServices/BehaviouralTracking.asmx/GetWorkDeskCommendationsPaged'
         commendations_headers = {
             **common_headers,
@@ -408,8 +388,6 @@ def simonScrap(username, password):
             'X-Requested-With': 'XMLHttpRequest',
             'Referer': f'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/SocialBehaviour/StudentProfileBehaviouralHistory.aspx?UserGUID={studentGUID}',
         }
-
-        # Payload
         commendations_payload = json.dumps({
             "sort": [{"field": "CommendationDate", "dir": "desc"}],
             "filter": None,
@@ -422,25 +400,11 @@ def simonScrap(username, password):
             "page": 1,
             "pageSize": 50
         })
+        response = requests.post(
+            commendations_url, headers=commendations_headers, cookies=cookies, data=commendations_payload)
+        return response.json()
 
-        response = requests.post(commendations_url, headers=commendations_headers, cookies=cookies, data=commendations_payload)
-        response_dict = response.json()
-        all_data['commendations'] = response_dict
-        # Fetch Student Profile Details
-        profile_details_url = 'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/StudentProfiles.asmx/StudentProfileDetails'
-        profile_details_headers = {
-            **common_headers,
-            'Accept': 'application/json, text/plain, */*',
-            'Content-Type': 'application/json',
-            'Referer': f'https://intranet.padua.vic.edu.au/profiles/students/{studentID}/aspx/EnrolmentInformation/StudentProfileStudentStatus.aspx/',
-        }
-
-        # The Content-Length is 20, so a payload is likely needed
-        payload = json.dumps({"studentId": studentID})  # Replace with your actual payload
-        response = requests.post(profile_details_url, headers=profile_details_headers, cookies=cookies, data=payload)
-        response_dict = response.json()
-        all_data['profile_details'] = response_dict
-        # Fetch Student Enrollment Information
+    def fetch_enrollment_info(studentID, studentGUID):
         enrollment_info_url = f'https://intranet.padua.vic.edu.au/WebModules/Profiles/Student/EnrolmentInformation/StudentProfileStudentStatus.aspx?UserGUID={studentGUID}'
         enrollment_info_headers = {
             **common_headers,
@@ -452,84 +416,75 @@ def simonScrap(username, password):
             'Upgrade-Insecure-Requests': '1',
             'Referer': f'https://intranet.padua.vic.edu.au/profiles/students/{studentID}/aspx/EnrolmentInformation/StudentProfileStudentStatus.aspx/',
         }
-
-        response = requests.get(enrollment_info_url, headers=enrollment_info_headers, cookies=cookies)
+        response = requests.get(
+            enrollment_info_url, headers=enrollment_info_headers, cookies=cookies)
         response_text = response.text
-
-        # Parse the HTML content
-
-
         soup = BeautifulSoup(response_text, 'html.parser')
+        enrollment_info = {
+            'gov_student_number': soup.find('input', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_GovernmentStudentNumberEdit'})['value'],
+            'barcode': soup.find('input', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_BarcodeEdit'})['value'],
+            'year_level': soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_YearLevelEdit'}).find('option', selected=True).text,
+            'homeroom': soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_HomeroomEdit'}).find('option', selected=True).text,
+            'house': soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_HouseEdit'}).find('option', selected=True).text,
+            'campus': soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_CampusEdit'}).find('option', selected=True).text,
+            'status': soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_StatusEdit'}).find('option', selected=True).text
+        }
+        return enrollment_info
+    try:
+        wait = WebDriverWait(driver, 10)
+        wait.until(EC.presence_of_element_located(
+            (By.XPATH, '/html/body/noscript')))
 
-        # Extract student information
-        gov_student_number = soup.find('input', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_GovernmentStudentNumberEdit'})['value']
-        barcode = soup.find('input', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_BarcodeEdit'})['value']
-        year_level = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_YearLevelEdit'}).find('option', selected=True).text
-        homeroom = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_HomeroomEdit'}).find('option', selected=True).text
-        house = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_HouseEdit'}).find('option', selected=True).text
-        campus = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_CampusEdit'}).find('option', selected=True).text
-        status = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_StatusEdit'}).find('option', selected=True).text
-        
-        # Extract student information
-        enrollment_info = {}
-        enrollment_info['gov_student_number'] = soup.find('input', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_GovernmentStudentNumberEdit'})['value']
-        enrollment_info['barcode'] = soup.find('input', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_BarcodeEdit'})['value']
-        enrollment_info['year_level'] = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_YearLevelEdit'}).find('option', selected=True).text
-        enrollment_info['homeroom'] = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_HomeroomEdit'}).find('option', selected=True).text
-        enrollment_info['house'] = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_HouseEdit'}).find('option', selected=True).text
-        enrollment_info['campus'] = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_CampusEdit'}).find('option', selected=True).text
-        enrollment_info['status'] = soup.find('select', {'id': 'FormPlaceHolder_FormContent_DefaultContainer_DefaultContainer_PageContent_StatusEdit'}).find('option', selected=True).text
-        
-        # Add the enrollment info to the all_data dictionary
-        all_data['EnrollmentInfo'] = enrollment_info
+        wait.until(EC.presence_of_element_located(
+            (By.XPATH, '/html/body/div[2]/div[1]/nav/div[1]/div[1]/div[2]/div/a[1]')))
+        # Locate the element containing the four-digit number
+        element = driver.find_element_by_xpath(
+            '/html/body/div[2]/div[1]/nav/div[1]/div[1]/div[2]/div/a[1]')
+        href = element.get_attribute('href')
 
-        # Extract entry and exit history
-        entry_exit_table = soup.find('table', {'class': 'table'})
-        entry_exit_history = []
-        for row in entry_exit_table.find_all('tr')[1:]:
-            date, action = [cell.text for cell in row.find_all('td')]
-            entry_exit_history.append({'Date': date, 'Action': action})
+        # Use regex to extract the number (one or more digits)
+        match = re.search(r'/(\d+)/aspx', href)
+        if match:
+            studentID = match.group(1)
+            print(f"Number: {studentID}")
 
-        # Print or store the extracted information
-        print(f'Government Student Number: {gov_student_number}')
-        print(f'Barcode: {barcode}')
-        print(f'Year Level: {year_level}')
-        print(f'Homeroom: {homeroom}')
-        print(f'House: {house}')
-        print(f'Campus: {campus}')
-        print(f'Status: {status}')
-        print('Entry and Exit History:', entry_exit_history)
-     
+        # Extract cookies
+        cookies = driver.get_cookies()
 
-
-
-        #print(response_dict)
-       # print_keys_recursively(response_dict)
-
-        # keys_within_d = response_dict['d'].keys()
-        # print(keys_within_d)
-        # Sample function to list all attendance records for a specific semester
-        # def list_attendance_records_for_semester(data, semester_name):
-        #     semester_data = data['d']['SemesterBasedData']
-        #     attendance_records = []
-
-        #     for semester in semester_data:
-        #         if semester['Name'] == semester_name:
-        #             attendance_records = semester.get('ParentNotifiedAbsences', [])
-        #             break
-        #     else:
-        #         return f"No records found for semester: {semester_name}"
-            
-        #     return attendance_records
-
-        # attendance_records_2023_S2 = list_attendance_records_for_semester(response_dict, "2023, Semester 2")
-        # print(attendance_records_2023_S2)
-        # print("Amount of records:", len(attendance_records_2023_S2))
- 
-
-
+        # close the driver as we don't need it anymore
         driver.close()
-        return True
+
+        # Cookies: Extract from your browser and insert here
+        cookies = {
+            'AzureAppProxyAnalyticCookie_1971d3c1-f744-420e-a7b0-2bd2e07a23b5_https_1.3': cookies[1]["value"],
+            'ASP.NET_SessionId': cookies[2]["value"],
+            'adAuthCookie': cookies[0]["value"],
+        }
+
+
+
+        all_data['profile_details'] = fetch_profile_details(studentID)
+        all_data['dashboard'] = fetch_dashboard_data(
+            all_data['profile_details']['d']["UserGUID"])
+        all_data['timetable'] = fetch_timetable_data(
+            all_data['profile_details']['d']["UserGUID"])
+        all_data['user_info'] = fetch_user_info(
+            studentID, all_data['profile_details']['d']["UserGUID"])
+        all_data['alerts'] = fetch_alerts(
+            all_data['profile_details']['d']["UserGUID"])
+        all_data['get_messages'] = fetch_messages(
+            all_data['profile_details']['d']["UserGUID"])
+        all_data['medical_status'] = fetch_medical_status(
+            all_data['profile_details']['d']["CommunityID"], all_data['profile_details']['d']["UserGUID"])
+        all_data['behavioural_history'] = fetch_behavioural_history(
+            all_data['profile_details']['d']["UID"], all_data['profile_details']['d']["YearLevelCode"], all_data['profile_details']['d']["UserGUID"])
+        all_data['commendations'] = fetch_commendations(
+            all_data['profile_details']['d']["UserGUID"])
+        all_data['EnrollmentInfo'] = fetch_enrollment_info(
+            studentID, all_data['profile_details']['d']["UserGUID"])
+
+        return True, all_data
+
     except Exception as e:
         print("Timeout or another exception occurred:", e)
         driver.close()

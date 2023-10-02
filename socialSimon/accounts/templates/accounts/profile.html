@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <form method="post" action="{% url 'profile' %}">
+        {% csrf_token %}
+        <input type="hidden" id="whichButton" name="whichButton" value="">
+        <input type="submit" value="Sync Profile" onclick="document.getElementById('whichButton').value='sync'">
+        <input type="submit" value="Button 2" onclick="document.getElementById('whichButton').value='button2'">
+    </form>
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Profile Section -->
+            <div class="card">
+                <img src="/account/display_image" alt="User Icon">
+
+                <div class="card-body">
+                    <h5 class="card-title">{{ user.user_firstName }}</h5>
+                    <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
+                </div>
+            </div>
+        </div>
+</div>
+
+{% endblock %}
