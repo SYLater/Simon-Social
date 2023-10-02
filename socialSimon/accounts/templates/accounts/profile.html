@@ -1,19 +1,54 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .container {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .profile-section {
+        color: #000;
+    }
+    .simple-dropdown {
+        color: #000;
+        width: 200px;
+    }
+
+ .dropdown-content {
+    display: none;
+    position: relative;
+    left: -100%;
+    background-color: #f9f9f1;
+    width: auto;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    padding: 12px 16px;
+}
+
+    .dropdown-content a {
+        color: black;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+    }
+    
+    .dropdown-content a:hover {
+        background-color: #f1f1f1;
+    }
+</style>
+
 <div class="container">
-    <form method="post" action="{% url 'profile' %}">
+        <form method="post" action="{% url 'profile' %}">
         {% csrf_token %}
         <input type="hidden" id="whichButton" name="whichButton" value="">
         <input type="submit" value="Sync Profile" onclick="document.getElementById('whichButton').value='sync'">
         <input type="submit" value="Button 2" onclick="document.getElementById('whichButton').value='button2'">
     </form>
     <div class="row">
-        <div class="col-md-4">
+        <div class="profile-section">
             <!-- Profile Section -->
             <div class="card">
                 <img src="/account/display_image" alt="User Icon">
-
                 <div class="card-body">
                     <h5 class="card-title">{{ user.user_firstName }}</h5>
                     <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
@@ -21,12 +56,36 @@
             </div>
         </div>
     </div>
-    <div>
+
+    <div class="classes-section">
         <h1>Classes</h1>
-        {% for cls in user_classes %}
-            <p>{{ cls.class_teacher }} {{ cls.class_description }}</p>
+        {% for cls in user_classes_with_students %}
+        <div class="simple-dropdown">
+            <button class="dropdown-button">
+                {{ cls.class.class_teacher }} {{ cls.class.class_description }}
+            </button>
+            <div class="dropdown-content">
+                <a href="#">Option 1 for {{ cls.class.class_description }}</a>
+                <a href="#">Option 2 for {{ cls.class.class_description }}</a>
+                <h3>Students:</h3>
+                <ul>
+                    {% for student in cls.students %}
+                    <li>{{ student }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
         {% endfor %}
     </div>
 </div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function(){
+        $(".dropdown-button").click(function(){
+            $(this).next(".dropdown-content").slideToggle("slow");
+        });
+    });
+</script>
 
 {% endblock %}

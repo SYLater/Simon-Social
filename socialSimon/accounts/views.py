@@ -134,8 +134,7 @@ def fetch_all_classes(request):
     return all_classes
                 
 
-import json
-import requests
+
 
 def fetch_user_classes(current_user, cookies):
 
@@ -279,16 +278,32 @@ def add_student_to_class(student, class_code):
     relationship = UserClassesRelationship(user=student, class_id=target_class)
     relationship.save()
 
-def get_user_classes(user):
+def get_user_classes_with_students(user):
     # Query the UserClassesRelationship model to get related classes
     related_classes = user.user_classes.all()
 
-    # Extract the actual Class instances from the relationships
-    classes = [relation.class_id for relation in related_classes]
+    # Extract the actual Class instances and their students from the relationships
+    classes_with_students = [
+        {
+            "class": relation.class_id,
+            "students": get_students_from_class(relation.class_id)
+        } 
+        for relation in related_classes
+    ]
 
-    return classes
+    return classes_with_students
 
-import re
+
+def get_students_from_class(class_instance):
+    # Query the UserClassesRelationship model to get related users
+    related_users = class_instance.userclassesrelationship_set.all()
+
+    # Extract the actual User instances from the relationships
+    students = [relation.user for relation in related_users]
+
+    return students
+
+
 
 def profile(request):
     # Get the value of the clicked button
@@ -318,17 +333,21 @@ def profile(request):
     elif button_clicked == 'button2':
         print("Button 2")
     
-    # Get the classes of the current user
-    user_classes = get_user_classes(current_user)
     
+    # Get the classes and their students of the current user
+    user_classes_with_students = get_user_classes_with_students(current_user)
+
     # Prepare the context for the template
     context = {
         'student': request.user,  # Assuming the user model has the necessary attributes
-        "user_classes": user_classes
+        "user_classes_with_students": user_classes_with_students
     }
-    
+    for cls in user_classes_with_students:
+        for student in cls['students']:
+            print(student)
     # Render the profile page with the context
     return render(request, "accounts/profile.html", context)
+
 
 
 def display_image(request):

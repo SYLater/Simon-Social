@@ -1,0 +1,640 @@
+.container1 {
+  display: flex;
+  flex-wrap: wrap;
+  position: absolute;
+  /* overflow: auto;
+  overflow-y: hidden; */
+  width: 100%;
+  height: 97.5vh;
+}
+
+.Rooms {
+  height: 100%;
+  width: 15%;
+  order: 0;
+  overflow: hidden;
+  overflow-y: auto;
+  border-right: solid white 2px;
+}
+
+.current_chat {
+  position: absolute;
+  /* background-image: linear-gradient(to left, #050138, #0a0073); */
+  height: 50px;
+  z-index: 2;
+  margin: 0%;
+  width: 74.8%;
+  overflow: hidden;
+  background-color: #333;
+  border-bottom: solid #232323 2px;
+}
+.current_chat h3{
+  margin: 0;
+  padding-top: 1.5vh;
+}
+
+.AllMessages {
+  z-index: 1;
+  flex: 1;
+  order: 3;
+  flex-flow: column-reverse;
+  height: 95%;
+  overflow: hidden;
+  overflow-y: auto;
+  flex-direction: column-reverse;
+  padding: 0%;
+  margin: 0%;
+
+  border: 0%;
+}
+
+.Userpresence {
+  order: 4;
+  height: 100%;
+  width: 10%;
+  overflow: hidden;
+  overflow-y: auto;
+  left:10px;
+  display:list-item;
+}
+
+.OnlineUsers{
+  display:grid;
+}
+
+.idleUsers{
+  display:grid;
+}
+
+.AllMessagesOL {
+  position: relative;
+  padding: 0;
+  padding-top: 50px;
+  margin: 0;
+  bottom: 0;
+}
+
+.user-presence-avatar {
+  margin-top: calc(4px - 0.125rem);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  float: left;
+}
+
+.presence-status {
+  font-size: small;
+  overflow: hidden;
+  left: 10px;
+  margin-bottom: 5%;
+
+}
+
+.name-header-presence {
+  font-size: medium;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 0%;
+  margin-top: 5%;
+}
+
+.user-dm-avatar {
+  margin-top: calc(4px - 0.125rem);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  float: left;
+}
+
+
+.name-header-dm {
+  font-size: medium;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 0%;
+  margin-top: 5%;
+}
+
+li {
+  list-style: none;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.messagecozyMessage .user-avatar {
+  position: absolute;
+  margin-top: calc(4px - 0.125rem);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.contents {
+  position: relative;
+  left: 40px;
+}
+
+.name-time-msg {
+  position: relative;
+  width: max-content;
+  left: 10px;
+  background-color: #333;
+  border-radius: 5px;
+  border-left: solid #333 5px;
+  border-right: solid #333 5px;
+  border-top: solid #333 5px;
+}
+
+.name-time-header {
+  position: relative;
+  font-size: 22px;
+  overflow: hidden;
+  text-overflow: clip;
+  bottom: 5px;
+  height: auto;
+  color: #d04646;
+}
+
+.timestamp {
+  position: relative;
+  font-size: x-small;
+  color: white;
+  font-size: 14px;
+}
+
+.messageContent {
+  position: relative;
+  font-size: 24px;
+  overflow-wrap: hidden;
+  word-wrap: break-word;
+  bottom: 5px;
+  overflow: hidden;
+  max-width: 70vw;
+}
+
+.messageinput {
+  width: 74.5%;
+  border-radius: 20px;
+  border-width: 0px;
+  border: none;
+  background-color: #3c3c3c;
+  outline: none;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+  color: white;
+  height: 5%;
+  position: absolute;
+  z-index: 2;
+  bottom: 0%;
+  overflow: hidden;
+}
+
+/* scrollbar */
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+  border-radius: 25px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 25px;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 25px;
+}
+
+::-webkit-scrollbar-track {
+  margin-top: 5vh;
+ 
+ 
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+  border-radius: 25px;
+  margin-top: 6vh;
+
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 25px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+  border-radius: 25px;
+}
+
+.GroupRooms {
+  border-bottom: solid white 2px;
+}
+
+.User_Chat {
+  width: auto;
+  height: auto;
+  text-align: auto;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+}
+
+.User_Chat .name-header-dm{
+  font-size: large;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  float: left;
+  height: auto;
+  margin: 0;
+  margin-top: 10px;
+}
+
+
+.search-user{
+  position: relative;
+  display: flex;
+}
+
+.user-search-avatar {
+  margin-top: calc(4px - 0.125rem);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  float: left;
+}
+
+.name-header-search {
+  font-size: x-large;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  float: left;
+  height: auto;
+  color: #d04646;
+  margin: 0;
+  margin-top: 10px;
+}
+
+/* .room-join-btn{
+  left: 10px;
+  text-align: center;
+  padding: 3px;
+  font-size: large;
+  cursor: pointer;
+  position: relative;
+  background-color: transparent;  
+  
+} */
+
+.Create-Room-input {
+  position: relative;
+  left: 50px;
+  bottom: 20px;
+}
+
+.Create-Room-button {
+  position: relative;
+}
+
+.chat-icon {
+  width: 50px;
+  height: 50px;
+  position: relative;
+  float: left;
+}
+
+
+
+.trash-botton {
+  background-color: transparent;
+  border: transparent;
+  cursor: pointer;
+  position: relative;
+  float: right;
+}
+
+.add-botton {
+  background-color: transparent;
+  border: transparent;
+  cursor: pointer;
+  position: relative;
+  float: right;
+}
+
+.trash-icon {
+  height: 20px;
+  width: 20x;
+}
+
+.add-icon {
+  height: 20px;
+  width: 20x;
+}
+
+.chat-header {
+  position: relative;
+  padding: 15px;
+  left: 5px;
+  margin: 0;
+}
+
+
+.dm-header{
+  display: flex;
+}
+
+.dm-header .dm-icon {
+  width: 50px;
+  height: 50px;
+  position: relative;
+  float: left;
+  padding: 0;
+  bottom: 5px;
+}
+.dm-header h3 {
+  position: relative;
+  padding: 0;
+  text-indent: -1;
+  padding-top: 20px;
+  float: left;
+  margin: 0;
+  margin-right: 0;
+  margin-left: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 200px;
+  z-index: 3;
+}
+
+.dm-header .add-dm-botton {
+  background-color: transparent;
+  border: transparent;
+  cursor: pointer;
+  position: relative;
+  float: left;
+
+}
+
+.dm-header .add-dm-icon {
+  height: 15px;
+  width: 15x;
+  z-index: 2;
+  padding-top: 15px;
+}
+
+.hashtag-icon {
+  height: 10px;
+  width: 10px;
+}
+
+.list-chat-header {
+  position: relative;
+  padding-top: 15px;
+  padding-bottom: 0;
+
+  margin: 0;
+}
+
+/* .room_chat_join:hover {
+  background-color: #4CAF50;
+  color: white;
+} */
+
+.room-join-btn {
+  position: relative;
+  border: none;
+  transition: color 0.5s, transform 0.2s, background-color 0.2s;
+  outline: none;
+  border-radius: 3px;
+  border: 3px solid transparent;
+  left: 10px;
+  text-align: center;
+  padding: 3px;
+  font-size: large;
+  background-color: transparent;
+  color: white;
+  border: none;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.room-join-btn:active {
+  transform: translateY(3px);
+}
+
+.room-join-btn::after,
+.room-join-btn::before {
+  border-radius: 3px;
+}
+
+.room-join-btn:hover {
+  color: white;
+}
+
+.room-join-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  transition: opacity 0.3s, border 0.3s;
+}
+
+.room-join-btn:hover::before {
+  opacity: 0;
+}
+
+.room-join-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 200px;
+  background-color: #333;
+  border-color: transparent;
+  border-radius: 50%;
+  transform: translate(-10px, -70px) scale(0.1);
+  opacity: 0;
+  z-index: -1;
+  transition: transform 0.3s, opacity 0.3s, background-color 0.3s;
+}
+
+.room-join-btn:hover::after {
+  opacity: 1;
+  transform-origin: 100px 100px;
+  transform: scale(1) translate(-10px, -70px);
+}
+
+.UserDMs{
+  position: relative;
+}
+
+.user-add-dm{
+  display:none;
+  position: fixed;
+  margin: auto;
+  width: 15%;
+  z-index: 99;
+}
+
+.user-add-dm h4{
+  margin: 0;
+  padding: 0;
+  margin-right: 5px;
+  margin-left: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  float: left;
+}
+
+.user-add-dm input{
+  width: 55%;
+  background-color:#555;
+  border: none;
+  border-radius: 10px;
+}
+
+.search-user {
+  border: none;
+  transition: color 0.5s, transform 0.2s, background-color 0.2s;
+  outline: none;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-color: transparent;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.search-user:active {
+  transform: translateY(3px);
+}
+
+.search-user::after,
+.search-user::before {
+  border-radius: 3px;
+}
+
+.search-user:hover {
+  color: white;
+}
+
+.search-user::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  transition: opacity 0.3s, border 0.3s;
+}
+
+.search-user:hover::before {
+  opacity: 0;
+}
+
+.search-user::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 350px;
+  height: 350px;
+  background-color:#333;
+  border-color: transparent;
+  border-radius: 30%;
+  transform: translate(-10px, -70px) scale(0.1);
+  opacity: 0;
+  z-index: -1;
+  transition: transform 0.3s, opacity 0.3s, background-color 0.3s;
+}
+
+.search-user:hover::after {
+  opacity: 1;
+  transform-origin: 200px 200px;
+  transform: scale(1) translate(-10px, -70px);
+}
+
+
+.User_Chat {
+  border: none;
+  transition: color 0.5s, transform 0.2s, background-color 0.2s;
+  outline: none;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-color: transparent;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.User_Chat:active {
+  transform: translateY(3px);
+}
+
+.User_Chat::after,
+.User_Chat::before {
+  border-radius: 3px;
+}
+
+.User_Chat:hover {
+  color: white;
+}
+
+.User_Chat::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.3s, border 0.3s;
+}
+
+.User_Chat:hover::before {
+  opacity: 0;
+}
+
+.User_Chat::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 350px;
+  height: 350px;
+  background-color:#333;
+  border-color: transparent;
+  border-radius: 30%;
+  transform: translate(-10px, -70px) scale(0.1);
+  opacity: 0;
+  z-index: -1;
+  transition: transform 0.3s, opacity 0.3s, background-color 0.3s;
+}
+
+.User_Chat:hover::after {
+  opacity: 1;
+  transform-origin: 200px 200px;
+  transform: scale(1) translate(-10px, -70px);
+}

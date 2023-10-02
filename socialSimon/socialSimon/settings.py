@@ -32,17 +32,19 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    "accounts.apps.AccountsConfig",
-    "tasks.apps.TasksConfig",
-    "dashboard.apps.DashboardConfig",
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "crispy_forms",
-    "crispy_bootstrap5",
+    'daphne',  # Third-party app
+    'chat',  # Custom app
+    "accounts.apps.AccountsConfig",  # Custom app
+    "tasks.apps.TasksConfig",  # Custom app
+    "dashboard.apps.DashboardConfig",  # Custom app
+    "django.contrib.admin",  # Django built-in app
+    "django.contrib.auth",  # Django built-in app
+    "django.contrib.contenttypes",  # Django built-in app
+    "django.contrib.sessions",  # Django built-in app
+    "django.contrib.messages",  # Django built-in app
+    "django.contrib.staticfiles",  # Django built-in app
+    "crispy_forms",  # Third-party app
+    "crispy_bootstrap5",  # Third-party app
 ]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
@@ -76,6 +78,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "socialSimon.wsgi.application"
+ASGI_APPLICATION = "socialSimon.asgi.application"
 
 
 # Database
@@ -143,3 +146,4 @@ LOGIN_REDIRECT_URL = "/login"
 LOGOUT_REDIRECT_URL = "/account/login"
 
 AUTH_USER_MODEL = "accounts.User" 
+

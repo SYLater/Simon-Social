@@ -1,0 +1,51 @@
+{% load static %}
+<link rel="stylesheet" href="{% static  'chat/chat.css' %}">
+<script>
+    var element = document.getElementById("AllMessages");
+    element.scrollTop = element.scrollHeight;
+</script>
+
+<div class="current_chat">
+    <h3 id="current_chat_banner">{{ room_name }}</h3>
+</div>
+
+<ol class="AllMessagesOL" id="AllMessagesOL">
+    {% for sender in messages %}
+    <!-- Assuming you passed 'messages' in your Django view context -->
+    <li id="chat-messages-{{ sender.uuid }}">
+        <!-- ... rest of your code ... -->
+        <script>
+            var timesent = moment("{{ sender.Timestamp }}").calendar();
+            document.getElementById("message-timestamp-{{ sender.uuid }}").textContent += timesent;
+        </script>
+    </li>
+    {% endfor %}
+</ol>
+
+<div id="messageinput">
+    <input class="messageinput" id="text" placeholder="Type something..." autocomplete="off" spellcheck="true">
+</div>
+
+<script>
+    // Instead of Flask-SocketIO, use plain WebSockets
+    var socket = new WebSocket('ws://' + window.location.host + '/ws/some_path/'); // Adjust the path as needed
+
+    socket.onmessage = function (e) {
+        // Handle incoming messages if necessary
+        var data = JSON.parse(e.data);
+        console.log(data);
+    };
+
+    $('#text').keypress(function (e) {
+        console.log('text input')
+        var code = e.keyCode || e.which;
+        if (code == 13) {
+            text = $('#text').val();
+            $('#text').val('');
+            socket.send(JSON.stringify({
+                'message': text
+            }));
+            console.log('send text')
+        }
+    });
+</script>
