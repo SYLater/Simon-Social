@@ -4,3 +4,5 @@ crispy-bootstrap4
 helium==3.2.5
 channels
 daphne
+channels 
+channels_redis

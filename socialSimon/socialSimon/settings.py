@@ -48,6 +48,8 @@ INSTALLED_APPS = [
 ]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
+WSGI_APPLICATION = "socialSimon.wsgi.application"
+ASGI_APPLICATION = 'socialSimon.asgi.application'
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -77,8 +79,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "socialSimon.wsgi.application"
-ASGI_APPLICATION = "socialSimon.asgi.application"
+
 
 
 # Database
@@ -143,7 +144,7 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_REDIRECT_URL = "/login"
-LOGOUT_REDIRECT_URL = "/account/login"
+LOGOUT_REDIRECT_URL = "/accounts/login"
 
 AUTH_USER_MODEL = "accounts.User" 
 

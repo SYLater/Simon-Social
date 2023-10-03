@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Chat Rooms</title>
+</head>
+<body>
+
+<h2>Available Chat Rooms</h2>
+What chat room would you like to enter?<br>
+<ul>
+    {% for classes in user_classes %}
+        <li>
+            <a href="{% url 'chat:room' classes.class_id.class_code %}">{{ classes.class_id.class_description }}</a>
+        </li>
+    {% endfor %}
+</ul>
+
+
+</body>
+</html>
+{% endblock %}

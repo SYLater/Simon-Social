@@ -1,51 +1,70 @@
-{% load static %}
-<link rel="stylesheet" href="{% static  'chat/chat.css' %}">
-<script>
-    var element = document.getElementById("AllMessages");
-    element.scrollTop = element.scrollHeight;
-</script>
+{% extends "base.html" %}
 
-<div class="current_chat">
-    <h3 id="current_chat_banner">{{ room_name }}</h3>
-</div>
+{% block content %}
+<h2>Available Chat Rooms</h2>
 
-<ol class="AllMessagesOL" id="AllMessagesOL">
-    {% for sender in messages %}
-    <!-- Assuming you passed 'messages' in your Django view context -->
-    <li id="chat-messages-{{ sender.uuid }}">
-        <!-- ... rest of your code ... -->
-        <script>
-            var timesent = moment("{{ sender.Timestamp }}").calendar();
-            document.getElementById("message-timestamp-{{ sender.uuid }}").textContent += timesent;
-        </script>
-    </li>
+<ul>
+    {% for classes in user_classes %}
+        <li>
+            <a href="{% url 'chat:room' classes.class_id.class_code %}">{{ classes.class_id.class_description }}</a>
+        </li>
     {% endfor %}
-</ol>
+</ul>
 
-<div id="messageinput">
-    <input class="messageinput" id="text" placeholder="Type something..." autocomplete="off" spellcheck="true">
-</div>
-
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Chat Room</title>
+</head>
+<body>
+    <!-- In chat_room.html -->
+<textarea id="chat-log" cols="100" rows="20">
+    {% for message in messages reversed %}
+        {{ message.author.user_userName }}: {{ message.content }}
+    {% endfor %}
+    </textarea><br>
+    <br>
+    <input id="chat-message-input" type="text" size="100"><br>
+    <input id="chat-message-submit" type="button" value="Send">
+    {{ room_name|json_script:"room-name" }}
+<!-- chat/templates/chat/room.html -->
 <script>
-    // Instead of Flask-SocketIO, use plain WebSockets
-    var socket = new WebSocket('ws://' + window.location.host + '/ws/some_path/'); // Adjust the path as needed
+    const roomName = JSON.parse(document.getElementById('room-name').textContent);
+    const chatSocket = new WebSocket(
+        'ws://'
+        + window.location.host
+        + '/ws/chat/'
+        + roomName
+        + '/'
+    );
 
-    socket.onmessage = function (e) {
-        // Handle incoming messages if necessary
-        var data = JSON.parse(e.data);
-        console.log(data);
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        document.querySelector('#chat-log').value += (data.message + '\n');
     };
 
-    $('#text').keypress(function (e) {
-        console.log('text input')
-        var code = e.keyCode || e.which;
-        if (code == 13) {
-            text = $('#text').val();
-            $('#text').val('');
-            socket.send(JSON.stringify({
-                'message': text
-            }));
-            console.log('send text')
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    document.querySelector('#chat-message-input').focus();
+    document.querySelector('#chat-message-input').onkeyup = function(e) {
+        if (e.keyCode === 13) {  // enter, return
+            document.querySelector('#chat-message-submit').click();
         }
-    });
+    };
+
+    document.querySelector('#chat-message-submit').onclick = function(e) {
+        const messageInputDom = document.querySelector('#chat-message-input');
+        const message = messageInputDom.value;
+        chatSocket.send(JSON.stringify({
+            'message': message
+        }));
+        messageInputDom.value = '';
+    };
 </script>
+
+</body>
+</html>
+{% endblock %}

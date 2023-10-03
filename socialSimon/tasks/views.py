@@ -23,7 +23,7 @@ def create_task(request):
     else:
         form = TaskForm()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':  # Check if it's an AJAX request
-            return render(request, 'tasks/partial_task_form.html', {'form': form, 'task': task})
+            return render(request, 'tasks/partial_task_form.html', {'form': form})
         return render(request, 'tasks/create_task.html', {'form': form})
     
 @login_required
@@ -49,7 +49,6 @@ def edit_task(request, task_id=None):  # <-- Include task_id parameter
 @login_required
 def delete_task(request, task_id=None):
     task = get_object_or_404(Task, id=task_id, user=request.user) if task_id else None
-    print(request.method)
     if request.method == "DELETE":
         if task:  # Ensure the task exists
             task.delete()

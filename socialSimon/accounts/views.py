@@ -50,9 +50,6 @@ def fetch_timetable(cookies):
         'Upgrade-Insecure-Requests': '1'
     }
     
-    # Add the content length if you know the exact size of your payload
-    # timetable_headers['Content-Length'] = '3628'
-    
     payload = {
     "__EVENTTARGET": "",
     "__EVENTARGUMENT": "",

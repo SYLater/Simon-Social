@@ -10,8 +10,8 @@ class Message(models.Model):
     def __str__(self):
         return self.author.user_userName
 
+    @staticmethod
     def last_10_messages(class_id):
-        # This function retrieves the last 10 messages for a chat room.
         return Message.objects.filter(chat_room=class_id).order_by('-timestamp').all()[:10]
 
 

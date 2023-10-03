@@ -6,7 +6,7 @@ import requests
 import json
 from datetime import datetime
 
-from accounts.views import extract_timetable_data
+from accounts.views import extract_timetable_data,  Class
 from tasks.models import Task
 
 common_headers = {
@@ -59,6 +59,7 @@ def generate_timetable_data(current_user):
     # Iterate over each period
     for period in all_periods:
         class_for_period = "No class"
+        room=""
 
         # Iterate over timetable data
         for timetable in timetable_data:
@@ -73,15 +74,17 @@ def generate_timetable_data(current_user):
                                 # Iterate over class data
                                 for data in value:
                                     if class_code in data:
-                                        class_for_period = class_code
+                                        domain = Class.objects.get(class_code=class_code)
+                                        class_for_period = domain.class_description
+                                        room = data[-6:]
                                         break
                                 if class_for_period != "No class":
                                     break
 
         # Add period data to list
-        period_data.append({'period': period, 'class_code': class_for_period})
-
+        period_data.append({'period': period, 'class_code': class_for_period, 'room': room})
     return period_data
+
 
 def dashboard(request):
     period_data = generate_timetable_data(request.user) 
