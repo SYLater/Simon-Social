@@ -179,7 +179,8 @@ def login(request):
             # Split email to get username
             if "@" in user_email:
                 username = user_email.split("@")[0]
-            
+            username = user_email
+
             # Check if user exists in Django database
             user = authenticate(user_email=user_email, password=password)
             if user:
@@ -328,6 +329,7 @@ def profile(request):
         print("Button 1")
         
     elif button_clicked == 'button2':
+        update_all_classes(request)
         print("Button 2")
     
     
@@ -395,7 +397,7 @@ def simonAuthChk(username, password):
     service = Service(executable_path=chromedriver_path)
 
     # Start a new Chrome browser session
-    driver = start_chrome(url, headless=True)
+    driver = start_chrome(url, headless=False)
 
     # Fill in the login details
     write(username, into='Username')
